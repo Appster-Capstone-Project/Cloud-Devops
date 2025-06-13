@@ -61,8 +61,8 @@ resource "azurerm_linux_virtual_machine" "docker_vm" {
   source_image_reference {
     publisher = "Canonical"
     offer     = "UbuntuServer"
-    sku       = "24_04-lts-gen2"
-    version   = "latest"
+    sku       = "19_04-gen2"
+    version   = "19.04.202001220"
   }
 
   custom_data = base64encode(<<EOF
