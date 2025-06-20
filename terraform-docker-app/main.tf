@@ -63,7 +63,7 @@ resource "azurerm_linux_virtual_machine" "vm" {
     publisher = "Canonical"
     offer     = "UbuntuServer"
     sku       = "19_04-lts-gen2"
-    version   = "19.04.202001220"
+    version   = "latest"
   }
 
   custom_data = base64encode(file("${path.module}/docker-startup.sh"))
