@@ -1,0 +1,166 @@
+name: Terraform CI/CD
+
+# This workflow is triggered by:
+# 1. 'workflow_dispatch' for manual runs (allowing selection of 'plan', 'apply', or 'destroy')
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Terraform Action to perform'
+        required: true
+        default: 'plan'
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+      environment:
+        description: 'Target Environment (e.g., dev, prod)'
+        required: true
+        default: 'dev'
+        type: string
+
+# Permissions for the GitHub Actions workflow.
+# 'id-token: write' is required for Azure OIDC login.
+# 'contents: read' is needed to checkout the repository code.
+permissions:
+  id-token: write
+  contents: read
+
+# Environment variables that will be available to all jobs in this workflow.
+# Example: Passing the selected environment to Terraform as a variable.
+env:
+  # This example uses a Terraform variable to pass the environment.
+  # Ensure your Terraform configuration expects a variable named 'environment_name'.
+  TF_VAR_environment_name: ${{ github.event.inputs.environment || 'dev' }}
+  # Set the path to your Terraform configuration files
+  TERRAFORM_WORKING_DIRECTORY: './terraform' # IMPORTANT: Adjust this path if your .tf files are not in './terraform'
+
+jobs:
+  # Job to run 'terraform plan'
+  terraform-plan:
+    runs-on: ubuntu-latest
+    # Define the environment associated with this job (optional, but good practice for secrets/approvals)
+    environment: ${{ github.event.inputs.environment || 'dev' }} # Uses the input environment, defaults to 'dev'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login (using OIDC)
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          # It's good practice to pin to a major version (e.g., 1.x) or a specific version (e.g., 1.5.7)
+          terraform_version: 1.x
+
+      - name: Terraform Init (with Azure Backend Configuration)
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=${{ secrets.TFSTATE_RG_NAME }}" \
+            -backend-config="storage_account_name=${{ secrets.TFSTATE_SA_NAME }}" \
+            -backend-config="container_name=${{ secrets.TFSTATE_CONTAINER_NAME }}" \
+            -backend-config="key=${{ secrets.TFSTATE_KEY }}"
+        # Set the working directory where your .tf files are located
+        working-directory: ${{ env.TERRAFORM_WORKING_DIRECTORY }}
+
+      - name: Terraform Plan
+        run: terraform plan -input=false -out="tfplan"
+        working-directory: ${{ env.TERRAFORM_WORKING_DIRECTORY }}
+
+      - name: Upload Terraform Plan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: ${{ env.TERRAFORM_WORKING_DIRECTORY }}/tfplan
+          # Keep the artifact for a short duration if it's only for the next job
+          retention-days: 1
+
+
+  # Job to run 'terraform apply'
+  terraform-apply:
+    # This job depends on 'terraform-plan' completing successfully
+    needs: terraform-plan
+    runs-on: ubuntu-latest
+    # This job will only run if the selected action is 'apply'
+    if: |
+      github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply'
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Terraform Plan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan
+          path: ${{ env.TERRAFORM_WORKING_DIRECTORY }}
+
+      - name: Azure Login (using OIDC)
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.x
+
+      - name: Terraform Init (with Azure Backend Configuration)
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=${{ secrets.TFSTATE_RG_NAME }}" \
+            -backend-config="storage_account_name=${{ secrets.TFSTATE_SA_NAME }}" \
+            -backend-config="container_name=${{ secrets.TFSTATE_CONTAINER_NAME }}" \
+            -backend-config="key=${{ secrets.TFSTATE_KEY }}"
+        working-directory: ${{ env.TERRAFORM_WORKING_DIRECTORY }}
+
+      - name: Terraform Apply (using the planned artifact)
+        run: terraform apply -auto-approve "tfplan"
+        working-directory: ${{ env.TERRAFORM_WORKING_DIRECTORY }}
+
+
+  # Job to run 'terraform destroy'
+  # This job is ONLY triggered manually via 'workflow_dispatch' with 'action: destroy'
+  terraform-destroy:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login (using OIDC)
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.x
+
+      - name: Terraform Init (with Azure Backend Configuration)
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=${{ secrets.TFSTATE_RG_NAME }}" \
+            -backend-config="storage_account_name=${{ secrets.TFSTATE_SA_NAME }}" \
+            -backend-config="container_name=${{ secrets.TFSTATE_CONTAINER_NAME }}" \
+            -backend-config="key=${{ secrets.TFSTATE_KEY }}"
+        working-directory: ${{ env.TERRAFORM_WORKING_DIRECTORY }}
+
+      - name: Terraform Destroy
+        run: terraform destroy -auto-approve -input=false
+        working-directory: ${{ env.TERRAFORM_WORKING_DIRECTORY }}
