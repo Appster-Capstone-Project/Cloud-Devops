@@ -2,6 +2,12 @@
 # This block sets up the necessary provider for interacting with Azure.
 provider "azurerm" {
   features {} # Required for the AzureRM provider
+
+  # Explicitly configure the AzureRM provider to use Service Principal authentication.
+  # These values will be passed as Terraform input variables.
+  client_id       = var.azure_client_id
+  tenant_id       = var.azure_tenant_id
+  subscription_id = var.azure_subscription_id
 }
 
 # Define Terraform settings for the current configuration.
@@ -94,7 +100,6 @@ resource "azurerm_linux_virtual_machine" "vm" {
   admin_password                = "P@ssword1234!" # INSECURE! Replace with a strong, secret-managed password.
   disable_password_authentication = false           # Set to true if using SSH keys only
 
-  # OS Disk configuration
   os_disk {
     caching              = "ReadWrite"    # Caching setting for the OS disk
     storage_account_type = "Standard_LRS" # Standard Locally Redundant Storage
