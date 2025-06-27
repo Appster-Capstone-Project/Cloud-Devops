@@ -8,6 +8,7 @@ provider "azurerm" {
   client_id       = var.azure_client_id
   tenant_id       = var.azure_tenant_id
   subscription_id = var.azure_subscription_id
+  use_oidc        = true # <-- IMPORTANT: Explicitly tell the provider to use OIDC
 }
 
 # Define Terraform settings for the current configuration.
