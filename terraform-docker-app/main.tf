@@ -3,12 +3,11 @@
 provider "azurerm" {
   features {} # Required for the AzureRM provider
 
-  # Explicitly configure the AzureRM provider to use Service Principal authentication.
-  # These values will be passed as Terraform input variables.
-  client_id       = var.azure_client_id
-  tenant_id       = var.azure_tenant_id
-  subscription_id = var.azure_subscription_id
-  use_oidc        = true # <-- IMPORTANT: Explicitly tell the provider to use OIDC
+  # When ARM_CLIENT_ID, ARM_TENANT_ID, ARM_SUBSCRIPTION_ID, and ARM_USE_OIDC
+  # environment variables are set in the CI/CD pipeline, the provider will
+  # automatically authenticate using OpenID Connect (OIDC).
+  # No explicit client_id, tenant_id, subscription_id, or use_oidc flags
+  # are needed here if using environment variables.
 }
 
 # Define Terraform settings for the current configuration.
