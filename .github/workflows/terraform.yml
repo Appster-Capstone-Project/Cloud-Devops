@@ -46,8 +46,8 @@ env:
   # Storage Account, and Container names.
   # The Storage Account name MUST be globally unique, lowercase, and between 3-24 characters.
   TFSTATE_BACKEND_RG_NAME: "capstone-RG"
-  TFSTATE_BACKEND_SA_NAME: "capstone-storage" # Example: "mystatesacct12345" (3-24 chars, lowercase, alphanumeric)
-  TFSTATE_BACKEND_CONTAINER_NAME: "terraform-states" # Example: "tfstate" or "terraform-states"
+  TFSTATE_BACKEND_SA_NAME: "capstonestorage234" # Example: "mystatesacct12345" (3-24 chars, lowercase, alphanumeric)
+  TFSTATE_BACKEND_CONTAINER_NAME: "tfstatestorage" # Example: "tfstate" or "terraform-states"
 
 jobs:
   # Job to run 'terraform plan'
