@@ -41,6 +41,14 @@ env:
   ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}   # Direct ARM env var for Azurerm provider
   ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }} # Direct ARM env var for Azurerm provider
 
+  # NEW: Environment variables for Terraform Backend Configuration
+  # IMPORTANT: Replace these placeholder values with your actual Azure Resource Group,
+  # Storage Account, and Container names.
+  # The Storage Account name MUST be globally unique, lowercase, and between 3-24 characters.
+  TFSTATE_BACKEND_RG_NAME: "capstone-RG"
+  TFSTATE_BACKEND_SA_NAME: "capstone-storage" # Example: "mystatesacct12345" (3-24 chars, lowercase, alphanumeric)
+  TFSTATE_BACKEND_CONTAINER_NAME: "terraform-states" # Example: "tfstate" or "terraform-states"
+
 jobs:
   # Job to run 'terraform plan'
   terraform-plan:
@@ -71,9 +79,9 @@ jobs:
       - name: Terraform Init (with Azure Backend Configuration)
         run: |
           terraform init \
-            -backend-config="resource_group_name=YOUR_TFSTATE_RESOURCE_GROUP_NAME" \
-            -backend-config="storage_account_name=YOUR_TFSTATE_STORAGE_ACCOUNT_NAME" \
-            -backend-config="container_name=YOUR_TFSTATE_CONTAINER_NAME" \
+            -backend-config="resource_group_name=${{ env.TFSTATE_BACKEND_RG_NAME }}" \
+            -backend-config="storage_account_name=${{ env.TFSTATE_BACKEND_SA_NAME }}" \
+            -backend-config="container_name=${{ env.TFSTATE_BACKEND_CONTAINER_NAME }}" \
             -backend-config="key=docker_app_state.tfstate" # Static key for state file
         # Set the working directory where your .tf files are located
         working-directory: ${{ env.TERRAFORM_WORKING_DIRECTORY }}
@@ -127,9 +135,9 @@ jobs:
       - name: Terraform Init (with Azure Backend Configuration)
         run: |
           terraform init \
-            -backend-config="resource_group_name=YOUR_TFSTATE_RESOURCE_GROUP_NAME" \
-            -backend-config="storage_account_name=YOUR_TFSTATE_STORAGE_ACCOUNT_NAME" \
-            -backend-config="container_name=YOUR_TFSTATE_CONTAINER_NAME" \
+            -backend-config="resource_group_name=${{ env.TFSTATE_BACKEND_RG_NAME }}" \
+            -backend-config="storage_account_name=${{ env.TFSTATE_BACKEND_SA_NAME }}" \
+            -backend-config="container_name=${{ env.TFSTATE_BACKEND_CONTAINER_NAME }}" \
             -backend-config="key=docker_app_state.tfstate" # Static key for state file
         working-directory: ${{ env.TERRAFORM_WORKING_DIRECTORY }}
 
@@ -165,9 +173,9 @@ jobs:
       - name: Terraform Init (with Azure Backend Configuration)
         run: |
           terraform init \
-            -backend-config="resource_group_name=YOUR_TFSTATE_RESOURCE_GROUP_NAME" \
-            -backend-config="storage_account_name=YOUR_TFSTATE_STORAGE_ACCOUNT_NAME" \
-            -backend-config="container_name=YOUR_TFSTATE_CONTAINER_NAME" \
+            -backend-config="resource_group_name=${{ env.TFSTATE_BACKEND_RG_NAME }}" \
+            -backend-config="storage_account_name=${{ env.TFSTATE_BACKEND_SA_NAME }}" \
+            -backend-config="container_name=${{ env.TFSTATE_BACKEND_CONTAINER_NAME }}" \
             -backend-config="key=docker_app_state.tfstate" # Static key for state file
         working-directory: ${{ env.TERRAFORM_WORKING_DIRECTORY }}
 
