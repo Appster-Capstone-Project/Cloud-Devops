@@ -34,6 +34,8 @@ env:
   TF_VAR_environment_name: ${{ github.event.inputs.environment || 'dev' }}
   # Set the path to your Terraform configuration files
   TERRAFORM_WORKING_DIRECTORY: './terraform-docker-app' # Adjusted based on your file structure
+  # IMPORTANT FIX: Explicitly tell the Azurerm provider to use OIDC authentication
+  ARM_USE_OIDC: true # <-- NEW: This forces the Azurerm provider to use OIDC
 
 jobs:
   # Job to run 'terraform plan'
@@ -54,14 +56,13 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           auth-type: 'SERVICE_PRINCIPAL' # CORRECTED: Use 'SERVICE_PRINCIPAL' for OIDC with SP
 
-      # FIX FOR: "Authenticating using the Azure CLI is only supported as a User" error.
-      # This step explicitly sets the ARM_* environment variables that Terraform's Azurerm provider
-      # automatically uses for Service Principal authentication.
+      # Pass Azure credentials as Terraform environment variables (TF_VAR_*)
+      # The 'azurerm' provider will pick these up directly.
       - name: Set Azure Credentials for Terraform Provider
         run: |
-          echo "ARM_CLIENT_ID=${{ secrets.AZURE_CLIENT_ID }}" >> $GITHUB_ENV
-          echo "ARM_TENANT_ID=${{ secrets.AZURE_TENANT_ID }}" >> $GITHUB_ENV
-          echo "ARM_SUBSCRIPTION_ID=${{ secrets.AZURE_SUBSCRIPTION_ID }}" >> $GITHUB_ENV
+          echo "TF_VAR_azure_client_id=${{ secrets.AZURE_CLIENT_ID }}" >> $GITHUB_ENV
+          echo "TF_VAR_azure_tenant_id=${{ secrets.AZURE_TENANT_ID }}" >> $GITHUB_ENV
+          echo "TF_VAR_azure_subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}" >> $GITHUB_ENV
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -119,12 +120,11 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           auth-type: 'SERVICE_PRINCIPAL' # CORRECTED
 
-      # FIX FOR: "Authenticating using the Azure CLI is only supported as a User" error.
       - name: Set Azure Credentials for Terraform Provider
         run: |
-          echo "ARM_CLIENT_ID=${{ secrets.AZURE_CLIENT_ID }}" >> $GITHUB_ENV
-          echo "ARM_TENANT_ID=${{ secrets.AZURE_TENANT_ID }}" >> $GITHUB_ENV
-          echo "ARM_SUBSCRIPTION_ID=${{ secrets.AZURE_SUBSCRIPTION_ID }}" >> $GITHUB_ENV
+          echo "TF_VAR_azure_client_id=${{ secrets.AZURE_CLIENT_ID }}" >> $GITHUB_ENV
+          echo "TF_VAR_azure_tenant_id=${{ secrets.AZURE_TENANT_ID }}" >> $GITHUB_ENV
+          echo "TF_VAR_azure_subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}" >> $GITHUB_ENV
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -164,12 +164,11 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           auth-type: 'SERVICE_PRINCIPAL' # CORRECTED
 
-      # FIX FOR: "Authenticating using the Azure CLI is only supported as a User" error.
       - name: Set Azure Credentials for Terraform Provider
         run: |
-          echo "ARM_CLIENT_ID=${{ secrets.AZURE_CLIENT_ID }}" >> $GITHUB_ENV
-          echo "ARM_TENANT_ID=${{ secrets.AZURE_TENANT_ID }}" >> $GITHUB_ENV
-          echo "ARM_SUBSCRIPTION_ID=${{ secrets.AZURE_SUBSCRIPTION_ID }}" >> $GITHUB_ENV
+          echo "TF_VAR_azure_client_id=${{ secrets.AZURE_CLIENT_ID }}" >> $GITHUB_ENV
+          echo "TF_VAR_azure_tenant_id=${{ secrets.AZURE_TENANT_ID }}" >> $GITHUB_ENV
+          echo "TF_VAR_azure_subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}" >> $GITHUB_ENV
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
