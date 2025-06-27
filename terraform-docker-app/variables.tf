@@ -6,6 +6,28 @@ variable "location" {
   default     = "East US" # Default value for the location, can be overridden.
 }
 
+# Variables for Azure Service Principal authentication
+# These variables will be populated from GitHub Secrets via environment variables (TF_VAR_*)
+# in your GitHub Actions workflow.
+variable "azure_client_id" {
+  description = "The Client ID (App ID) of the Azure AD Application/Service Principal used for authentication."
+  type        = string
+  sensitive   = true # Mark as sensitive to prevent its value from appearing in logs
+}
+
+variable "azure_tenant_id" {
+  description = "The Tenant ID of your Azure subscription."
+  type        = string
+  sensitive   = true # Mark as sensitive
+}
+
+variable "azure_subscription_id" {
+  description = "The Subscription ID to deploy resources into."
+  type        = string
+  sensitive   = true # Mark as sensitive
+}
+
+
 # Example: You might want to define other variables for flexibility.
 # variable "vm_size" {
 #   description = "Size of the virtual machine."
