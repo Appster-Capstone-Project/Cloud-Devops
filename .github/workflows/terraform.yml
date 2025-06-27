@@ -28,13 +28,12 @@ permissions:
   contents: read
 
 # Environment variables that will be available to all jobs in this workflow.
-# Example: Passing the selected environment to Terraform as a variable.
 env:
   # This example uses a Terraform variable to pass the environment.
   # Ensure your Terraform configuration expects a variable named 'environment_name'.
   TF_VAR_environment_name: ${{ github.event.inputs.environment || 'dev' }}
   # Set the path to your Terraform configuration files
-  TERRAFORM_WORKING_DIRECTORY: './terraform' # IMPORTANT: Adjust this path if your .tf files are not in './terraform'
+  TERRAFORM_WORKING_DIRECTORY: './terraform-docker-app' # Adjusted based on your file structure
 
 jobs:
   # Job to run 'terraform plan'
@@ -53,20 +52,20 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          auth-type: 'Federated' # Crucial for OIDC authentication
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          # It's good practice to pin to a major version (e.g., 1.x) or a specific version (e.g., 1.5.7)
-          terraform_version: 1.x
+          terraform_version: 1.6.0 # Pinned to a specific version
 
       - name: Terraform Init (with Azure Backend Configuration)
         run: |
           terraform init \
-            -backend-config="resource_group_name=${{ secrets.TFSTATE_RG_NAME }}" \
-            -backend-config="storage_account_name=${{ secrets.TFSTATE_SA_NAME }}" \
-            -backend-config="container_name=${{ secrets.TFSTATE_CONTAINER_NAME }}" \
-            -backend-config="key=${{ secrets.TFSTATE_KEY }}"
+            -backend-config="resource_group_name=YOUR_TFSTATE_RESOURCE_GROUP_NAME" \
+            -backend-config="storage_account_name=YOUR_TFSTATE_STORAGE_ACCOUNT_NAME" \
+            -backend-config="container_name=YOUR_TFSTATE_CONTAINER_NAME" \
+            -backend-config="key=docker_app_state.tfstate" # Static key for state file
         # Set the working directory where your .tf files are located
         working-directory: ${{ env.TERRAFORM_WORKING_DIRECTORY }}
 
@@ -101,7 +100,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: tfplan
-          path: ${{ env.TERRAFORM_WORKING_DIRECTORY }}
+          path: ${{ env.TERRAFORM_WORKING_DIRECTORY }} # Downloads to the working directory
 
       - name: Azure Login (using OIDC)
         uses: azure/login@v1
@@ -109,19 +108,20 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          auth-type: 'Federated' # Crucial for OIDC authentication
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.x
+          terraform_version: 1.6.0 # Pinned to a specific version
 
       - name: Terraform Init (with Azure Backend Configuration)
         run: |
           terraform init \
-            -backend-config="resource_group_name=${{ secrets.TFSTATE_RG_NAME }}" \
-            -backend-config="storage_account_name=${{ secrets.TFSTATE_SA_NAME }}" \
-            -backend-config="container_name=${{ secrets.TFSTATE_CONTAINER_NAME }}" \
-            -backend-config="key=${{ secrets.TFSTATE_KEY }}"
+            -backend-config="resource_group_name=YOUR_TFSTATE_RESOURCE_GROUP_NAME" \
+            -backend-config="storage_account_name=YOUR_TFSTATE_STORAGE_ACCOUNT_NAME" \
+            -backend-config="container_name=YOUR_TFSTATE_CONTAINER_NAME" \
+            -backend-config="key=docker_app_state.tfstate" # Static key for state file
         working-directory: ${{ env.TERRAFORM_WORKING_DIRECTORY }}
 
       - name: Terraform Apply (using the planned artifact)
@@ -146,19 +146,20 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          auth-type: 'Federated' # Crucial for OIDC authentication
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.x
+          terraform_version: 1.6.0 # Pinned to a specific version
 
       - name: Terraform Init (with Azure Backend Configuration)
         run: |
           terraform init \
-            -backend-config="resource_group_name=${{ secrets.TFSTATE_RG_NAME }}" \
-            -backend-config="storage_account_name=${{ secrets.TFSTATE_SA_NAME }}" \
-            -backend-config="container_name=${{ secrets.TFSTATE_CONTAINER_NAME }}" \
-            -backend-config="key=${{ secrets.TFSTATE_KEY }}"
+            -backend-config="resource_group_name=YOUR_TFSTATE_RESOURCE_GROUP_NAME" \
+            -backend-config="storage_account_name=YOUR_TFSTATE_STORAGE_ACCOUNT_NAME" \
+            -backend-config="container_name=YOUR_TFSTATE_CONTAINER_NAME" \
+            -backend-config="key=docker_app_state.tfstate" # Static key for state file
         working-directory: ${{ env.TERRAFORM_WORKING_DIRECTORY }}
 
       - name: Terraform Destroy
