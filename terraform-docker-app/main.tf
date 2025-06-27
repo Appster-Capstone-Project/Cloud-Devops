@@ -106,12 +106,19 @@ resource "azurerm_linux_virtual_machine" "vm" {
     name                 = "docker-os-disk" # Name of the OS disk
   }
 
-  # Source image for the VM (Fedora-based image from official community gallery)
+  # Source image for the VM (Flatcar Linux from Azure Marketplace)
   source_image_reference {
     publisher = "kinvolk"               # Publisher for Flatcar Container Linux
     offer     = "flatcar-container-linux-free" # Offer name for Flatcar
     sku       = "stable-gen2"           # SKU for the stable channel, Generation 2 VM
     version   = "latest"                # Always use the latest available version
+  }
+
+  # Add the 'plan' block for Marketplace images that require it
+  plan {
+    name    = "stable-gen2"             # Corresponds to the SKU
+    publisher = "kinvolk"               # Corresponds to the publisher
+    product = "flatcar-container-linux-free" # Corresponds to the offer
   }
 
   # Custom data to execute a script on the VM after it's provisioned.
