@@ -52,11 +52,16 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          auth-type: 'SERVICE_PRINCIPAL' # <-- CORRECTED: Use 'SERVICE_PRINCIPAL' for OIDC with SP
-          # enable-AzPSSession: false # This can be removed or kept, it defaults to false
-          # environment: azurecloud # This can be removed or kept, it defaults to azurecloud
-          # allow-no-subscriptions: false # This can be removed or kept, it defaults to false
-          # audience: api://AzureADTokenExchange # This is the default audience for OIDC with Azure, can be removed
+          auth-type: 'SERVICE_PRINCIPAL' # CORRECTED: Use 'SERVICE_PRINCIPAL' for OIDC with SP
+
+      # FIX FOR: "Authenticating using the Azure CLI is only supported as a User" error.
+      # This step explicitly sets the ARM_* environment variables that Terraform's Azurerm provider
+      # automatically uses for Service Principal authentication.
+      - name: Set Azure Credentials for Terraform Provider
+        run: |
+          echo "ARM_CLIENT_ID=${{ secrets.AZURE_CLIENT_ID }}" >> $GITHUB_ENV
+          echo "ARM_TENANT_ID=${{ secrets.AZURE_TENANT_ID }}" >> $GITHUB_ENV
+          echo "ARM_SUBSCRIPTION_ID=${{ secrets.AZURE_SUBSCRIPTION_ID }}" >> $GITHUB_ENV
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -112,7 +117,14 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          auth-type: 'SERVICE_PRINCIPAL' # <-- CORRECTED
+          auth-type: 'SERVICE_PRINCIPAL' # CORRECTED
+
+      # FIX FOR: "Authenticating using the Azure CLI is only supported as a User" error.
+      - name: Set Azure Credentials for Terraform Provider
+        run: |
+          echo "ARM_CLIENT_ID=${{ secrets.AZURE_CLIENT_ID }}" >> $GITHUB_ENV
+          echo "ARM_TENANT_ID=${{ secrets.AZURE_TENANT_ID }}" >> $GITHUB_ENV
+          echo "ARM_SUBSCRIPTION_ID=${{ secrets.AZURE_SUBSCRIPTION_ID }}" >> $GITHUB_ENV
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -150,7 +162,14 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          auth-type: 'SERVICE_PRINCIPAL' # <-- CORRECTED
+          auth-type: 'SERVICE_PRINCIPAL' # CORRECTED
+
+      # FIX FOR: "Authenticating using the Azure CLI is only supported as a User" error.
+      - name: Set Azure Credentials for Terraform Provider
+        run: |
+          echo "ARM_CLIENT_ID=${{ secrets.AZURE_CLIENT_ID }}" >> $GITHUB_ENV
+          echo "ARM_TENANT_ID=${{ secrets.AZURE_TENANT_ID }}" >> $GITHUB_ENV
+          echo "ARM_SUBSCRIPTION_ID=${{ secrets.AZURE_SUBSCRIPTION_ID }}" >> $GITHUB_ENV
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
