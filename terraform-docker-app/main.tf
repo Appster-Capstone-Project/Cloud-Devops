@@ -108,10 +108,10 @@ resource "azurerm_linux_virtual_machine" "vm" {
 
   # Source image for the VM (Fedora-based image from official community gallery)
   source_image_reference {
-    publisher = "Fedora"       # Official Fedora Project community gallery
-    offer     = "Fedora-Cloud"
-    sku       = "40-x64"       # Fedora 40, x64 architecture
-    version   = "latest"       # Always use the latest available version
+    publisher = "kinvolk"               # Publisher for Flatcar Container Linux
+    offer     = "flatcar-container-linux-free" # Offer name for Flatcar
+    sku       = "stable-gen2"           # SKU for the stable channel, Generation 2 VM
+    version   = "latest"                # Always use the latest available version
   }
 
   # Custom data to execute a script on the VM after it's provisioned.
