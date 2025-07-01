@@ -117,7 +117,7 @@ resource "azurerm_linux_virtual_machine" "vm" {
   # WARNING: Hardcoding passwords directly in Terraform is highly INSECURE for production environments.
   # For production, consider using Azure Key Vault to store and retrieve passwords securely,
   # or use SSH key authentication only (`admin_ssh_key` block instead of `admin_password`).
-  admin_password                = "123cap123" # INSECURE! Replace with a strong, secret-managed password.
+  admin_password                = "P@ssword1234!" # INSECURE! Replace with a strong, secret-managed password.
   disable_password_authentication = false          # Set to true if using SSH keys only
 
   os_disk {
