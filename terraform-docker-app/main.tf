@@ -89,9 +89,9 @@ resource "azurerm_public_ip" "public_ip" {
 # --- Azure Network Interface (NIC) ---
 # Connects the virtual machine to the virtual network and assigns an IP address.
 resource "azurerm_network_interface" "nic" {
-  name                = "docker-nic"                           # Name of the network interface
-  location            = azurerm_resource_group.rg.location   # Same location as RG
-  resource_group_name = azurerm_resource_group.rg.name       # Associates with the resource group
+  name                      = "docker-nic"                           # Name of the network interface
+  location                  = azurerm_resource_group.rg.location   # Same location as RG
+  resource_group_name       = azurerm_resource_group.rg.name       # Associates with the resource group
 
   # IP configuration for the NIC
   ip_configuration {
@@ -100,6 +100,11 @@ resource "azurerm_network_interface" "nic" {
     private_ip_address_allocation = "Dynamic"                  # Dynamically assigns a private IP from the subnet
     public_ip_address_id          = azurerm_public_ip.public_ip.id # Associates the public IP
   }
+}
+
+resource "azurerm_network_interface_security_group_association" "nic_nsg_assoc" {
+  network_interface_id      = azurerm_network_interface.nic.id
+  network_security_group_id = azurerm_network_security_group.security_group.id
 }
 
 # --- Azure Linux Virtual Machine ---
