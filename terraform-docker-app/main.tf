@@ -40,6 +40,24 @@ resource "azurerm_resource_group" "rg" {
   location = var.location   # Uses the 'location' variable defined in variables.tf
 }
 
+resource "azurerm_network_security_group" "rg" {
+  name                = "acceptanceTestSecurityGroup1"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+
+  security_rule {
+    name                       = "test123"
+    priority                   = 100
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Any"
+    source_port_range          = "*"
+    destination_port_range     = "*"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
+}
+
 # --- Azure Virtual Network (VNet) ---
 # The private network in Azure where your VM and other resources will reside.
 resource "azurerm_virtual_network" "vnet" {
@@ -86,6 +104,8 @@ resource "azurerm_network_interface" "nic" {
 
 # --- Azure Linux Virtual Machine ---
 # The core compute resource where your Docker application will run.
+
+
 resource "azurerm_linux_virtual_machine" "vm" {
   name                  = "docker-vm"                          # Name of the virtual machine
   resource_group_name   = azurerm_resource_group.rg.name       # Associates with the resource group
@@ -98,7 +118,7 @@ resource "azurerm_linux_virtual_machine" "vm" {
   # For production, consider using Azure Key Vault to store and retrieve passwords securely,
   # or use SSH key authentication only (`admin_ssh_key` block instead of `admin_password`).
   admin_password                = "P@ssword1234!" # INSECURE! Replace with a strong, secret-managed password.
-  disable_password_authentication = false           # Set to true if using SSH keys only
+  disable_password_authentication = true           # Set to true if using SSH keys only
 
   os_disk {
     caching              = "ReadWrite"    # Caching setting for the OS disk
