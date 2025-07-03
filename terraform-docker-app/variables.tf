@@ -1,28 +1,27 @@
-# Input variable for the Azure region where resources will be deployed.
-# Using a variable makes your Terraform configuration reusable for different regions.
 variable "location" {
   description = "The Azure region where resources will be deployed."
   type        = string
-  default     = "East US" # Default value for the location, can be overridden.
+  default     = "East US"
 }
 
-# Example: You might want to define other variables for flexibility.
-# variable "vm_size" {
-#   description = "Size of the virtual machine."
-#   type        = string
-#   default     = "Standard_B1s"
-# }
+variable "prefix" {
+  description = "A prefix for naming Azure resources."
+  type        = string
+  default     = "flatcar-docker"
+}
 
-# variable "admin_username" {
-#   description = "Admin username for the VM."
-#   type        = string
-#   default     = "azureuser"
-# }
+variable "ssh_public_key_path" {
+  description = "Path to the SSH public key file (e.g., ~/.ssh/id_rsa.pub) for initial VM access."
+  type        = string
+}
 
-# IMPORTANT: For production, do NOT hardcode passwords. Use a secure method like Azure Key Vault.
-# Mark sensitive variables to prevent them from being shown in logs.
-# variable "admin_password" {
-#   description = "Admin password for the VM. Highly recommend using Key Vault for production!"
-#   type        = string
-#   sensitive   = true # This prevents the value from being printed in Terraform logs.
-# }
+variable "aad_group_object_id" {
+  description = "The Object ID of the Azure AD (Entra ID) group that will have 'Virtual Machine Administrator Login' access."
+  type        = string
+}
+
+variable "environment_name" {
+  description = "The target environment name (e.g., dev, prod) for resource naming and segregation."
+  type        = string
+  default     = "dev" # Default for local runs
+}

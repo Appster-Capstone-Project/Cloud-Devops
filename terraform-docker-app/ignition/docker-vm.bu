@@ -1,0 +1,18 @@
+version: 1.0.0
+variant: flatcar
+systemd:
+  units:
+    - name: docker.service
+      enabled: true
+    - name: containerd.service
+      enabled: true
+passwd:
+  users:
+    - name: core
+      groups:
+        - docker # Add the 'core' user to the docker group
+storage:
+  files:
+    - path: /etc/hostname
+      contents:
+        inline: "docker-vm-{{ .environment_name }}" # Dynamic hostname
