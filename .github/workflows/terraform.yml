@@ -78,7 +78,7 @@ jobs:
       - name: Install Butane
         run: |
           BUTANE_VERSION=$(curl -s https://api.github.com/repos/coreos/butane/releases/latest | jq -r .tag_name)
-          curl -LO "https://github.com/coreos/butane/releases/download/${BUTANE_VERSION}/butane-${BUTANE_VERSION}-x86_64-unknown-linux-gnu"
+          curl -LO "https://github.com/coreos/butane/releases/download/${BUTANE_VERSION}/butane-x86_64-unknown-linux-gnu"
           chmod +x "butane-${BUTANE_VERSION}-x86_64-unknown-linux-gnu"
           sudo mv "butane-${BUTANE_VERSION}-x86_64-unknown-linux-gnu" /usr/local/bin/butane
 
