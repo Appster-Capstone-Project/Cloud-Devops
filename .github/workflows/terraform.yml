@@ -86,12 +86,12 @@ jobs:
         run: |
           mkdir -p "${{ env.TERRAFORM_WORKING_DIRECTORY }}/ignition"
           # Pass environment_name to Butane for dynamic hostname
-          butane --config-file ${{ github.workspace }}/terraform-docker-app/ignition/docker-vm.bu \
+          butane ${{ github.workspace }}/terraform-docker-app/ignition/docker-vm.bu \
                  --pretty \
                  --output "${{ env.TERRAFORM_WORKING_DIRECTORY }}/ignition/docker-vm.json" \
                  -v environment_name=${{ env.TF_VAR_environment_name }}
         working-directory: ${{ github.workspace }}
-
+        
       - name: Setup SSH Key for Terraform
         run: |
           mkdir -p ~/.ssh
