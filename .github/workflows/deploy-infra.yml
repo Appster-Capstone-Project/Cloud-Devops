@@ -1,0 +1,227 @@
+name: Deploy Azure VM Infrastructure
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Terraform Action to perform'
+        required: true
+        default: 'plan'
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+      environment:
+        description: 'Target Environment (e.g., dev, prod)'
+        required: true
+        default: 'dev'
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  TF_VAR_environment_name: ${{ github.event.inputs.environment || 'dev' }}
+  TERRAFORM_WORKING_DIRECTORY: './terraform-docker-app'
+  ARM_USE_OIDC: true
+  ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+  TFSTATE_BACKEND_RG_NAME: "capstone-RG"
+  TFSTATE_BACKEND_SA_NAME: "capstonestorage234"
+  TFSTATE_BACKEND_CONTAINER_NAME: "tfstatestorage"
+
+jobs:
+  # Initial setup of Azure Storage Account for Terraform state (only run once manually)
+  setup-tf-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Azure Login for Backend Setup
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Create Azure Storage Account for Terraform State
+        run: |
+          az group create --name ${{ env.TFSTATE_BACKEND_RG_NAME }} --location eastus || true
+          az storage account create \
+            --name ${{ env.TFSTATE_BACKEND_SA_NAME }} \
+            --resource-group ${{ env.TFSTATE_BACKEND_RG_NAME }} \
+            --location eastus \
+            --sku Standard_LRS \
+            --kind StorageV2 \
+            --allow-blob-public-access false || true
+          az storage container create \
+            --name ${{ env.TFSTATE_BACKEND_CONTAINER_NAME }} \
+            --account-name ${{ env.TFSTATE_BACKEND_SA_NAME }} \
+            --resource-group ${{ env.TFSTATE_BACKEND_RG_NAME }} || true
+        shell: bash
+    # This job should typically only be run once initially.
+    # You might comment it out or add 'if: false' after first successful run.
+
+
+  terraform-plan:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+    # Ensure setup-tf-backend has completed at least once for the state backend to exist
+    needs: [setup-tf-backend] # Uncomment if you want to ensure backend setup before plan
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Butane
+        run: |
+          BUTANE_VERSION=$(curl -s https://api.github.com/repos/coreos/butane/releases/latest | jq -r .tag_name)
+          curl -LO "https://github.com/coreos/butane/releases/download/${BUTANE_VERSION}/butane-${BUTANE_VERSION}-x86_64-unknown-linux-gnu"
+          chmod +x "butane-${BUTANE_VERSION}-x86_64-unknown-linux-gnu"
+          sudo mv "butane-${BUTANE_VERSION}-x86_64-unknown-linux-gnu" /usr/local/bin/butane
+
+      - name: Generate Ignition JSON from Butane YAML
+        run: |
+          mkdir -p "${{ env.TERRAFORM_WORKING_DIRECTORY }}/ignition"
+          # Pass environment_name to Butane for dynamic hostname
+          butane --config-file ${{ github.workspace }}/terraform-docker-app/ignition/docker-vm.bu \
+                 --pretty \
+                 --output "${{ env.TERRAFORM_WORKING_DIRECTORY }}/ignition/docker-vm.json" \
+                 -v environment_name=${{ env.TF_VAR_environment_name }}
+        working-directory: ${{ github.workspace }}
+
+      - name: Setup SSH Key for Terraform
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keygen -y -f ~/.ssh/id_rsa > ~/.ssh/id_rsa.pub
+        shell: bash
+
+      - name: Azure Login (using OIDC)
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
+
+      - name: Terraform Init (with Azure Backend Configuration)
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=${{ env.TFSTATE_BACKEND_RG_NAME }}" \
+            -backend-config="storage_account_name=${{ env.TFSTATE_BACKEND_SA_NAME }}" \
+            -backend-config="container_name=${{ env.TFSTATE_BACKEND_CONTAINER_NAME }}" \
+            -backend-config="key=${{ env.TF_VAR_environment_name }}-docker_app_state.tfstate" # Dynamic key for state file
+        working-directory: ${{ env.TERRAFORM_WORKING_DIRECTORY }}
+
+      - name: Terraform Plan
+        run: terraform plan -input=false -out="tfplan" \
+          -var "ssh_public_key_path=${{ github.workspace }}/.ssh/id_rsa.pub" \
+          -var "aad_group_object_id=${{ secrets.AZURE_AD_GROUP_OBJECT_ID }}"
+        working-directory: ${{ env.TERRAFORM_WORKING_DIRECTORY }}
+
+      - name: Upload Terraform Plan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: ${{ env.TERRAFORM_WORKING_DIRECTORY }}/tfplan
+          retention-days: 1
+
+
+  terraform-apply:
+    needs: terraform-plan
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply'
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Terraform Plan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan
+          path: ${{ env.TERRAFORM_WORKING_DIRECTORY }}
+
+      - name: Azure Login (using OIDC)
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
+
+      - name: Terraform Init (with Azure Backend Configuration)
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=${{ env.TFSTATE_BACKEND_RG_NAME }}" \
+            -backend-config="storage_account_name=${{ env.TFSTATE_BACKEND_SA_NAME }}" \
+            -backend-config="container_name=${{ env.TFSTATE_BACKEND_CONTAINER_NAME }}" \
+            -backend-config="key=${{ env.TF_VAR_environment_name }}-docker_app_state.tfstate"
+        working-directory: ${{ env.TERRAFORM_WORKING_DIRECTORY }}
+
+      - name: Terraform Apply (using the planned artifact)
+        run: terraform apply -auto-approve "tfplan"
+        working-directory: ${{ env.TERRAFORM_WORKING_DIRECTORY }}
+
+      - name: Get VM Public IP Address
+        id: get_vm_ip
+        run: |
+          VM_PUBLIC_IP=$(terraform output -raw vm_public_ip_address)
+          echo "vm_public_ip_address=$VM_PUBLIC_IP" >> $GITHUB_OUTPUT
+        working-directory: ${{ env.TERRAFORM_WORKING_DIRECTORY }}
+
+      - name: Display VM IP and Connection Commands
+        run: |
+          echo "VM Public IP: ${{ steps.get_vm_ip.outputs.vm_public_ip_address }}"
+          echo "Connect via Azure AD: az ssh vm --ip ${{ steps.get_vm_ip.outputs.vm_public_ip_address }}"
+          echo "Connect via SSH Key: ssh -i ~/.ssh/id_rsa core@${{ steps.get_vm_ip.outputs.vm_public_ip_address }}"
+
+  terraform-destroy:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login (using OIDC)
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
+
+      - name: Terraform Init (with Azure Backend Configuration)
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=${{ env.TFSTATE_BACKEND_RG_NAME }}" \
+            -backend-config="storage_account_name=${{ env.TFSTATE_BACKEND_SA_NAME }}" \
+            -backend-config="container_name=${{ env.TFSTATE_BACKEND_CONTAINER_NAME }}" \
+            -backend-config="key=${{ env.TF_VAR_environment_name }}-docker_app_state.tfstate"
+        working-directory: ${{ env.TERRAFORM_WORKING_DIRECTORY }}
+
+      - name: Terraform Destroy
+        run: terraform destroy -auto-approve -input=false \
+          -var "ssh_public_key_path=${{ github.workspace }}/.ssh/id_rsa.pub" \
+          -var "aad_group_object_id=${{ secrets.AZURE_AD_GROUP_OBJECT_ID }}"
+        working-directory: ${{ env.TERRAFORM_WORKING_DIRECTORY }}
