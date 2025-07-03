@@ -106,22 +106,19 @@ resource "azurerm_linux_virtual_machine" "vm" {
     name                 = "docker-os-disk" # Name of the OS disk
   }
 
-  # Source image for the VM (Flatcar Linux from Azure Marketplace)
   source_image_reference {
-    publisher = "kinvolk"               # Publisher for Flatcar Container Linux
-    offer     = "flatcar-container-linux-free" # Offer name for Flatcar
-    sku       = "stable-gen2"           # SKU for the stable channel, Generation 2 VM
-    version   = "latest"                # Always use the latest available version
+    publisher = "Canonical"
+    offer     = "0001-com-ubuntu-server-jammy" # Offer name for Ubuntu Server 22.04 LTS (Jammy Jellyfish)
+    sku       = "22_04-lts"                   # SKU for Ubuntu Server 22.04 LTS
+    version   = "latest"                      # Always use the latest available version
   }
 
-  # Add the 'plan' block for Marketplace images that require it
-  plan {
-    name    = "stable-gen2"             # Corresponds to the SKU
-    publisher = "kinvolk"               # Corresponds to the publisher
-    product = "flatcar-container-linux-free" # Corresponds to the offer
-  }
+  # The 'plan' block is typically not required for standard Ubuntu images
+  # provided by Canonical. Remove it.
 
   # Custom data to execute a script on the VM after it's provisioned.
   # This typically includes commands to install Docker, pull images, and start containers.
   custom_data = base64encode(file("${path.module}/docker-startup.sh"))
+
+  # ... other VM configurations ...
 }
