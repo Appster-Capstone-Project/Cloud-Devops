@@ -1,0 +1,57 @@
+---
+- name: Update Docker application container on Flatcar VM
+  hosts: vm_group # This will be dynamically set by the GitHub Actions workflow
+  gather_facts: false # Flatcar is minimal; gathering facts might be slow or unnecessary
+  become: true # Run commands with sudo on the remote host
+
+  vars:
+    app_container_name: "my-docker-app" # Name of your running container
+    app_image_name: "youracr.azurecr.io/your-app-image" # Your Azure Container Registry image name
+    app_image_tag: "{{ app_tag_from_ci | default('latest') }}" # Dynamic tag from CI, fallback to latest
+    app_port_mapping: "80:80" # Example: "host_port:container_port"
+    # ACR_USERNAME and ACR_PASSWORD will be passed via environment variables from GitHub Actions
+
+  tasks:
+    - name: Ensure Docker and Containerd services are started
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        state: started
+        enabled: true
+      loop:
+        - docker
+        - containerd
+
+    - name: Log in to Azure Container Registry (if private)
+      ansible.builtin.shell: |
+        echo "{{ lookup('env', 'ACR_PASSWORD') }}" | docker login {{ app_image_name.split('/')[0] }} -u {{ lookup('env', 'ACR_USERNAME') }} --password-stdin
+      environment:
+        ACR_USERNAME: "{{ lookup('env', 'AZURE_CLIENT_ID') }}" # Use your Service Principal Client ID
+        ACR_PASSWORD: "{{ lookup('env', 'AZURE_CLIENT_SECRET') }}" # Use your Service Principal Secret
+      no_log: true # Prevent sensitive info from appearing in logs
+      # CONSIDER: For a more robust solution, use Azure Managed Identity on the VM
+      # and configure Docker daemon to use Azure CLI credential helper.
+      # This removes the need to pass credentials via env vars.
+
+    - name: Pull the latest Docker application image
+      community.docker.docker_image:
+        name: "{{ app_image_name }}"
+        tag: "{{ app_image_tag }}"
+        source: pull
+        state: present
+      register: image_pull_result # Register output to check if image was updated
+
+    - name: Stop and remove existing container if image was updated or options changed
+      community.docker.docker_container:
+        name: "{{ app_container_name }}"
+        image: "{{ app_image_name }}:{{ app_image_tag }}"
+        state: started # Ensure it's running
+        recreate: yes # Crucial: recreate if image or options differ from desired state
+        pull: true # Ensure the latest image is pulled before starting/recreating (redundant with previous task but safe)
+        ports:
+          - "{{ app_port_mapping }}"
+        env: # Pass any necessary environment variables to your application container
+          CONTAINER_VERSION: "{{ app_image_tag }}" # Example: pass the Git SHA as version
+        # You can add volumes, networks, etc., as needed for your container
+      # The 'when' condition below ensures recreation only if the image was actually pulled new,
+      # or if you force it. `recreate: yes` often handles this implicitly.
+      # when: image_pull_result is changed
