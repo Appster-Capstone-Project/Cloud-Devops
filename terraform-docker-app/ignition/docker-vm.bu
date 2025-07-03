@@ -15,4 +15,4 @@ storage:
   files:
     - path: /etc/hostname
       contents:
-        inline: "docker-vm-{{ .environment_name }}" # Dynamic hostname
+        inline: "docker-vm-host" # Now a static hostname, as variables aren't supported via CLI
