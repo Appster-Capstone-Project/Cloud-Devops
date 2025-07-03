@@ -91,13 +91,24 @@ jobs:
                  --output "${{ env.TERRAFORM_WORKING_DIRECTORY }}/ignition/docker-vm.json"
         working-directory: ${{ github.workspace }}
         
-      - name: Setup SSH Key for Terraform
+      - name: Retrieve SSH Private Key from Azure Key Vault (for Ansible)
         run: |
+          KEY_VAULT_NAME="capstone-project"
+          SECRET_NAME="SshPrivateKeyForVM"
+
+          private_key_content=$(az keyvault secret show \
+            --name "$SECRET_NAME" \
+            --vault-name "$KEY_VAULT_NAME" \
+            --query value \
+            --output tsv)
+
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keygen -y -f ~/.ssh/id_rsa > ~/.ssh/id_rsa.pub
+          chmod 700 ~/.ssh
+
+          echo "$private_key_content" > ~/.ssh/id_rsa_flatcar_vm_new
+          chmod 600 ~/.ssh/id_rsa_flatcar_vm_new
         shell: bash
+
 
       - name: Azure Login (using OIDC)
         uses: azure/login@v1
