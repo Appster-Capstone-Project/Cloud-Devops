@@ -85,37 +85,13 @@ jobs:
         env:
           TF_VAR_environment_name: 'dev' # Ensure this matches the environment your VM is deployed to
 
-        name: Retrieve SSH Private Key from Azure Key Vault
+        name: Setup SSH Key for Ansible
         run: |
-          # Ensure this job has 'permissions: id-token: write'
-          # This command performs a silent OIDC login for Azure CLI using the federated token
-          az login \
-            --service-principal \
-            --username "${{ secrets.AZURE_CLIENT_ID }}" \
-            --tenant "${{ secrets.AZURE_TENANT_ID }}" \
-            --federated-token "$(cat $ACTIONS_ID_TOKEN_REQUEST_TOKEN)" \
-            --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}" # Explicitly select subscription
-
-          # --- Key Vault Retrieval ---
-          KEY_VAULT_NAME="capstone-project" # Ensure this matches your Key Vault name
-          SECRET_NAME="SshPrivateKeyForVM"  # Ensure this matches your secret name in Key Vault
-
-          private_key_content=$(az keyvault secret show \
-            --name "$SECRET_NAME" \
-            --vault-name "$KEY_VAULT_NAME" \
-            --query value \
-            --output tsv)
-
-          # --- SSH Key Setup ---
           mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-
-          # Ensure the private_key_content is echoed correctly (double quotes are crucial)
-          echo "$private_key_content" > ~/.ssh/id_rsa_flatcar_vm_new
-          chmod 600 ~/.ssh/id_rsa_flatcar_vm_new
-
-          # Verify the private key and generate the public key
-          ssh-keygen -y -f ~/.ssh/id_rsa_flatcar_vm_new > ~/.ssh/id_rsa_flatcar_vm_new.pub
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          # Add VM's public key to known_hosts to prevent SSH warnings
+          ssh-keyscan -H ${{ env.VM_PUBLIC_IP }} >> ~/.ssh/known_hosts
         shell: bash
 
       - name: Create Ansible Inventory
