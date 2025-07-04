@@ -90,7 +90,7 @@ resource "azurerm_linux_virtual_machine" "vm" {
   name                  = "docker-vm"                          # Name of the virtual machine
   resource_group_name   = azurerm_resource_group.rg.name       # Associates with the resource group
   location              = azurerm_resource_group.rg.location   # Same location as RG
-  size                  = "Standard_B1s"                         # VM size (e.g., Standard_B1s is a small, economical size)
+  size                  = "Standard_D2s_v3"                     
   admin_username        = "azureuser"                            # Administrator username for SSH access
   network_interface_ids = [azurerm_network_interface.nic.id]   # Attaches the created network interface
 
