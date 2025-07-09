@@ -1,0 +1,2 @@
+prefix   = "docker"
+location = "EastUS"
