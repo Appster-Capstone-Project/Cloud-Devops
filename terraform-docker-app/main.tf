@@ -39,7 +39,36 @@ resource "azurerm_resource_group" "rg" {
   name     = "docker-vm-rg" # Name of the resource group
   location = var.location   # Uses the 'location' variable defined in variables.tf
 }
+# --- Azure Network Security Group (NSG) ---
+resource "azurerm_network_security_group" "security_group" {
+  name                = "${var.prefix}-docker-vm-nsg"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
 
+  security_rule {
+    name                        = "AllowSSH"
+    priority                    = 100
+    direction                   = "Inbound"
+    access                      = "Allow"
+    protocol                    = "Tcp"
+    source_port_range           = "*"
+    destination_port_range      = "22"
+    source_address_prefix       = "*" # REFINE THIS IN PRODUCTION
+    destination_address_prefix  = "*"
+  }
+
+  security_rule {
+    name                        = "AllowHTTP"
+    priority                    = 110
+    direction                   = "Inbound"
+    access                      = "Allow"
+    protocol                    = "Tcp"
+    source_port_range           = "*"
+    destination_port_range      = "80"
+    source_address_prefix       = "*"
+    destination_address_prefix  = "*"
+  }
+}
 # --- Azure Virtual Network (VNet) ---
 # The private network in Azure where your VM and other resources will reside.
 resource "azurerm_virtual_network" "vnet" {
