@@ -5,6 +5,11 @@ variable "location" {
   type        = string
   default     = "East US" # Default value for the location, can be overridden.
 }
+variable "prefix" {
+  description = "A prefix for naming Azure resources."
+  type        = string
+}
+
 
 # Example: You might want to define other variables for flexibility.
 # variable "vm_size" {
