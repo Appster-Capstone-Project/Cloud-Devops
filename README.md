@@ -1,6 +1,6 @@
 
 # Cloud Deployment with Terraform, GitHub Actions, and Ansible
-Overview
+## Overview
 
 This repository demonstrates an end-to-end automated cloud deployment pipeline using:
 
@@ -14,7 +14,7 @@ Ansible for post-provisioning configuration and application deployment
 
 The goal is to provide a repeatable, secure, and environment-agnostic way to deploy virtual machines and deploy/update containerized applications on them.
 
-Architecture
+## Architecture
 
 Terraform provisions:
 
@@ -46,8 +46,8 @@ Deployment of a containerized application from Azure Container Registry (ACR)
 
 Auto-restart and recreation of containers when new images are pushed
 
-Deployment Flow
-1. Triggering the Workflow
+## Deployment Flow
+### 1. Triggering the Workflow
 
 Manually trigger the workflow from GitHub Actions:
 
@@ -60,7 +60,7 @@ Example:
 Action: apply
 Environment: prod
 
-2. Backend Setup (First Time Only)
+### 2. Backend Setup (First Time Only)
 
 Before running plan or apply, the Terraform backend storage must exist.
 The setup-tf-backend job:
@@ -73,7 +73,7 @@ Configures secure access (no public blob access)
 
 This only needs to be run once per project.
 
-3. Infrastructure Provisioning
+### 3. Infrastructure Provisioning
 
 The terraform-plan job:
 
@@ -99,7 +99,7 @@ Applies infrastructure changes (terraform apply)
 
 Retrieves VM public IP for later use
 
-4. Application Deployment
+## 4. Application Deployment
 
 After VM provisioning:
 
@@ -113,7 +113,7 @@ Pulls the latest application image
 
 Deploys/recreates the container with the correct environment variables and port mappings
 
-5. Infrastructure Destruction
+## 5. Infrastructure Destruction
 
 The terraform-destroy job:
 
